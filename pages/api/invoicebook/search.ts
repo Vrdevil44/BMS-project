@@ -1,11 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { openDatabase } from '../../../utils/db';
+import PocketBase from 'pocketbase';
+
+const pb = new PocketBase('http://127.0.0.1:8090'); // Adjust the URL as needed
 
 // Define the structure of an address book entry
 interface AddressBookEntry {
-  id: number;
+  id: string; // Change to string because PocketBase uses string IDs
   UUID: string;
   name: string;
+  companyname: string;
   email: string;
   phone: string;
   address: string;
@@ -19,13 +22,11 @@ interface SearchQueryParams {
 // Define the response type to include either an array of entries or an error message
 type SearchResponseData = AddressBookEntry[] | { error: string };
 
-// The handler function with types for req and res
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SearchResponseData>
 ) {
   if (req.method === 'GET') {
-    // Ensure the query parameter is a string
     const UUID = typeof req.query.UUID === 'string' ? req.query.UUID : undefined;
     
     if (!UUID) {
@@ -33,13 +34,25 @@ export default async function handler(
       return;
     }
 
-    const db = await openDatabase();
-    const entry = await db.get<AddressBookEntry>('SELECT * FROM addressbook WHERE UUID = ?', [UUID]);
-    
-    if (entry) {
-      res.json([entry]);  // Return the entry as an array for consistency with other endpoints
-    } else {
-      res.json([]);  // Return an empty array if no entry is found
+    try {
+      const entry = await pb.collection('invoicebook').getFirstListItem(`UUID="${UUID}"`, {});
+      if (entry) {
+        // Map the data to match the AddressBookEntry interface
+        const mappedEntry: AddressBookEntry = {
+          id: entry.id,
+          UUID: entry.UUID,
+          name: entry.name,
+          companyname: entry.companyname,
+          email: entry.email,
+          phone: entry.phone,
+          address: entry.address
+        };
+        res.json([mappedEntry]);
+      } else {
+        res.json([]); // Return an empty array if no entry is found
+      }
+    } catch (error) {
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   } else {
     res.setHeader('Allow', ['GET']);
