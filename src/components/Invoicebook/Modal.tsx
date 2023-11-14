@@ -3,14 +3,16 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 
 interface FormFields {
     name: string;
+    companyname: string;
     email: string;
     phone: string;
     address: string;
 }
 interface Entry {
-    id: number;
+    id: string;
     UUID: string;
     name: string;
+    companyname: string;
     email: string;
     phone: string;
     address: string;
@@ -22,21 +24,29 @@ interface ModalProps {
     onClose: () => void;
     children: React.ReactNode;
     onSubmit: (e: FormEvent<HTMLFormElement>) => void;
-    onDelete?: (entryId: number) => void; // Pass the ID to delete
+    onDelete?: (entryId: string) => void; // Pass the ID to delete
     onClearForm: () => void; // Add this line
     mode: 'add' | 'edit';
     initialData: Entry;
+    fetchCustomerData: (uuid: string) => Promise<Entry | null>; // Function to fetch customer data
 }
+
+//This is my current invoicebook' popup modal that handles both updating/deleting functions, and creating entry functions as well, in a dual mode setup.
+//I want to include the search and fetch functionality discussed before into this form to populate these fields automatically
 
 const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmit,
     onDelete,
     onClearForm,
     mode,
+    fetchCustomerData,
     initialData }) => {
     if (!isOpen) return null;
 
+    const [searchUuid, setSearchUuid] = useState<string>('');
+
     const [formData, setFormData] = useState<FormFields>({
         name: '',
+        companyname: '',
         email: '',
         phone: '',
         address: ''
@@ -46,12 +56,29 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
         if (mode === 'edit') {
             setFormData({
                 name: initialData.name,
+                companyname: initialData.companyname,
                 email: initialData.email,
                 phone: initialData.phone,
                 address: initialData.address
             });
         }
     }, [initialData, mode]);
+
+    const handleFetchClick = async () => {
+        const customerData = await fetchCustomerData(searchUuid);
+        if (customerData) {
+            setFormData({
+                name: customerData.name,
+                companyname: customerData.companyname,
+                email: customerData.email,
+                phone: customerData.phone,
+                address: customerData.address,
+            });
+        } else {
+            // Handle case where customer is not found
+            console.log("Customer not found");
+        }
+    };
 
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -64,6 +91,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
     const clearForm = () => {
         setFormData({
             name: '',
+            companyname: '',
             email: '',
             phone: '',
             address: '',
@@ -88,6 +116,21 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
                     </svg>
                 </button>
                 <h2 className="text-2xl font-semibold mb-4 text-gray-800">{title}</h2>
+                <div>
+                    <input
+                        className="w-full p-2 border rounded text-gray-700"
+                        type="text"
+                        placeholder="Enter UUID to search"
+                        value={searchUuid}
+                        onChange={(e) => setSearchUuid(e.target.value)}
+                    />
+                    <button
+                        onClick={handleFetchClick}
+                        className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                    >
+                        Fetch Customer
+                    </button>
+                </div>
                 <form className="mb-6 space-y-4" id="personForm" onSubmit={onSubmit}>
                     <input
                         className="w-full p-2 border rounded text-gray-700"
@@ -96,6 +139,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
                         value={formData?.name ?? ''}
                         onChange={handleChange}
                         placeholder="Name"
+                    />
+                    <input
+                        className="w-full p-2 border rounded text-gray-700"
+                        type="text"
+                        name="companyname"
+                        placeholder="Company Name"
+                        value={formData.companyname} // Ensure you have companyName in your formData state
+                        onChange={handleChange} // Make sure handleChange updates formData.companyName
                     />
                     <input
                         className="w-full p-2 border rounded text-gray-700"

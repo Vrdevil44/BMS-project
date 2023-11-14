@@ -1,23 +1,23 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { openDatabase } from '../../../utils/db';
+import PocketBase from 'pocketbase';
 
-// Define the expected request body type
+const pb = new PocketBase('http://127.0.0.1:8090');
+
 interface CreateRequestBody {
   name: string;
   email: string;
   phone: string;
   address: string;
+  companyname: string;
 }
 
-// Define the response type
 interface CreateResponseData {
-  id?: number;
+  id?: string;
   UUID?: string;
   error?: string;
 }
 
-// Utility function to generate a custom, shorter UUID
-function generateCustomID(length: number = 6): string {
+function generateCustomID(length = 6) {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -26,27 +26,31 @@ function generateCustomID(length: number = 6): string {
   return result;
 }
 
-// The handler function with types for req and res
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<CreateResponseData>
 ) {
   if (req.method === 'POST') {
-    const { name, email, phone, address } = req.body as CreateRequestBody;
+    try {
+      const { name, companyname, email, phone, address } = req.body as CreateRequestBody;
 
-    // Generate a custom UUID for the new entry
-    const UUID = generateCustomID();
+      // Generate a custom UUID
+      const customUUID = generateCustomID();
 
-    const db = await openDatabase();
-    const result = await db.run(
-      'INSERT INTO addressbook (UUID, name, email, phone, address) VALUES (?, ?, ?, ?, ?)',
-      [UUID, name, email, phone, address]
-    );
+      // Create the record in the PocketBase collection
+      const record = await pb.collection('invoicebook').create({
+        UUID: customUUID, // Include the generated custom UUID
+        name,
+        companyname,
+        email,
+        phone,
+        address
+      });
 
-    if (!result.lastID) {
+      res.status(200).json({ id: record.id, UUID: customUUID }); // Send back the ID and the custom UUID of the new record
+    } catch (error) {
+      console.error('Failed to create entry', error);
       res.status(500).json({ error: 'Failed to create entry' });
-    } else {
-      res.json({ id: result.lastID, UUID });  // Sending back the UUID along with the ID
     }
   } else {
     res.setHeader('Allow', ['POST']);

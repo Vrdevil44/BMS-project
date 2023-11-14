@@ -1,64 +1,92 @@
-import React, { useState, useEffect, FormEvent, useMemo, useRef } from 'react';
+import React, { useState, useEffect, FormEvent, useMemo } from 'react';
 import Modal from './Modal';
+import PocketBase from 'pocketbase';
 
-// Define the structure of an address book entry
+
+const pb = new PocketBase('http://127.0.0.1:8090'); // Adjust the URL as needed
+
 interface Entry {
-  id: number;
+  id: string;
   UUID: string;
   name: string;
+  companyname: string;
   email: string;
   phone: string;
   address: string;
 }
 
-// Define the structure for sort configuration
 interface SortConfig {
   key: keyof Entry;
   direction: 'ascending' | 'descending';
 }
 
 const AddressBook: React.FC = () => {
-  const [searchUUID, setSearchUUID] = useState<string>('');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
-  const [searchedUUID, setSearchedUUID] = useState<string | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const [showModal, setShowModal] = useState(false);
+  const [searchInput, setSearchInput] = useState<string>('');
 
-  const handleAddClick = () => {
-    setShowModal(true)
-    setSelectedEntry(null)
-  };
-  const handleCloseModal = () => {
-    setShowModal(false)
-    setSelectedEntry(null)
-  };
   useEffect(() => {
     fetchEntries();
   }, []);
 
-
-  const handleSearch = async () => {
-    if (searchUUID) {
-      const response = await fetch(`/api/addressbook/search?UUID=${searchUUID}`);
-      const data = await response.json();
-      if (data && data.length > 0) {
-        setSearchedUUID(searchUUID);
-        // Optionally, set the form data if you're using it to display searched entry
+  const fetchEntries = async () => {
+    try {
+      const response = await fetch('/api/invoicebook/read');
+      if (!response.ok) throw new Error('Failed to fetch');
+      const result = await response.json();
+      // Access the 'data' property of the result
+      if (Array.isArray(result.data)) {
+        setEntries(result.data);
       } else {
-        alert('No entry found with the provided UUID.');
-        setSearchedUUID(null);
+        // Handle the case where 'data' is not an array
+        console.error('Data property fetched is not an array:', result.data);
+        setEntries([]); // Set entries to an empty array to avoid errors
       }
-    } else {
-      alert('Please provide a UUID to search.');
-      setSearchedUUID(null);
+    } catch (error) {
+      console.error('Fetch error:', error);
+      setEntries([]); // Set entries to an empty array to avoid errors
+    }
+  };
+  
+
+  const clearFormFields = () => {
+    setSelectedEntry({
+      id: '',
+      UUID: '',
+      name: '',
+      companyname: '',
+      email: '',
+      phone: '',
+      address: '',
+    });
+  };
+
+  const handleCRUDOperation = async (url: string, method: string, body?: {}) => {
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) throw new Error('Operation failed');
+      fetchEntries();
+    } catch (error) {
+      console.error('Operation error:', error);
     }
   };
 
-  const fetchEntries = async () => {
-    const response = await fetch('/api/addressbook/read');
-    const data = await response.json() as Entry[];
-    setEntries(data);
+  const handleAddClick = () => {
+    setSelectedEntry(null);
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setSelectedEntry(null);
   };
 
   const handleEdit = (entry: Entry) => {
@@ -66,105 +94,86 @@ const AddressBook: React.FC = () => {
     setShowModal(true);
   };
 
+  const handleDelete = async (id: string) => {
+  const deleteUrl = `/api/invoicebook/delete/${id}`;
+  await handleCRUDOperation(deleteUrl, 'DELETE',{});
+  setShowModal(false);
+};
 
-  // Adjusted handleDelete function
-  const handleDelete = async (id: number) => {
-    await fetch(`/api/addressbook/delete`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    setShowModal(false);
-    fetchEntries(); // Refresh the entries after deletion
-  };
 
   const requestSort = (key: keyof Entry) => {
-    let direction = 'ascending';
-    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-      direction = 'descending';
-    }
-    setSortConfig({ key, direction: direction as 'ascending' | 'descending' });
+    setSortConfig({
+      key,
+      direction: sortConfig.key === key && sortConfig.direction === 'ascending' ? 'descending' : 'ascending',
+    });
   };
 
   const sortedEntries = useMemo(() => {
     return [...entries].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === 'ascending' ? -1 : 1;
-      } else if (a[sortConfig.key] > b[sortConfig.key]) {
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
         return sortConfig.direction === 'ascending' ? 1 : -1;
       }
       return 0;
     });
   }, [entries, sortConfig]);
 
-  useEffect(() => {
-    const fetchEntries = async () => {
-      try {
-        const response = await fetch('/api/addressbook/read');
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json() as Entry[];
-        setEntries(data);
-      } catch (error) {
-        console.error('Error fetching entries:', error);
-      }
-    };
-
-    fetchEntries();
-  }, []);
-
-
-  const clearFormFields = () => {
-    setSelectedEntry({
-      id: 0,
-      UUID: '',
-      name: '',
-      email: '',
-      phone: '',
-      address: '',
-    });
-  };
+  const filteredSortedEntries = useMemo(() => {
+    return sortedEntries.filter(entry =>
+      entry.name.toLowerCase().includes(searchInput.toLowerCase()) ||
+      entry.UUID.toLowerCase().includes(searchInput.toLowerCase()),
+    );
+  }, [sortedEntries, searchInput]);
 
   const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
     const entryData = {
-      name: data.get('name') as string,
-      email: data.get('email') as string,
-      phone: data.get('phone') as string,
-      address: data.get('address') as string,
+      id: selectedEntry?.id,
+      name: formData.get('name'),
+      companyname: formData.get('companyname'),
+      email: formData.get('email'),
+      phone: formData.get('phone'),
+      address: formData.get('address'),
     };
 
-    if (selectedEntry && selectedEntry.id) {
-      // PUT request to update an existing entry
-      await fetch('/api/addressbook/update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ...entryData, id: selectedEntry.id }),
-      });
-      setSelectedEntry(null); // Clear the selected entry
-      setShowModal(false);
-      fetchEntries();
-    } else {
-      // POST request to create a new entry
-      const response = await fetch('/api/addressbook/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(entryData),
-      });
-      const data = await response.json();
-      alert(`Successfully added! Your UUID is: ${data.UUID}`);
-      clearFormFields(); // Clear the form fields after a successful add
-      fetchEntries(); // Re-fetch entries
-      setShowModal(false);
-      setSelectedEntry(null); // Reset selectedEntry after form submission
+    const url = selectedEntry ? '/api/invoicebook/update' : '/api/invoicebook/create';
+    const method = selectedEntry ? 'PUT' : 'POST';
+
+    await handleCRUDOperation(url, method, entryData);
+
+    setShowModal(false);
+    setSelectedEntry(null);
+    form.reset(); // Reset the form fields after a successful operation
+  }; 
+  
+
+  async function fetchCustomerData(uuid: string): Promise<Entry | null> {
+    try {
+        // Replace 'uuidFieldName' with the actual field name in your 'addressbook' collection that holds the UUID
+        const record = await pb.collection('addressbook').getFirstListItem(`UUID="${uuid}"`);
+        if (record) {
+            return {
+                id: record.id, // or any other necessary field from the record
+                UUID: record.UUID, // or the respective field
+                name: record.name,
+                companyname: record.companyname,
+                email: record.email,
+                phone: record.phone,
+                address: record.address
+            };
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching customer data:", error);
+        return null;
     }
-  };
+}
 
   return (
     <div className="container mx-auto p-6">
@@ -179,16 +188,11 @@ const AddressBook: React.FC = () => {
         <input
           className="w-full p-2 border rounded text-gray-700"
           type="text"
-          placeholder="Enter UUID to search"
-          value={searchUUID}
-          onChange={(e) => setSearchUUID(e.target.value)}
+          placeholder="Enter UUID or Name to search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)} // Update searchInput as user types
         />
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          type="button"
-          onClick={handleSearch}>
-          Search
-        </button>
+        
       </div>
 
       <table className="w-full border divide-y mt-4 text-gray-800">
@@ -199,6 +203,9 @@ const AddressBook: React.FC = () => {
             </th>
             <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('name')}>
               Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+            </th>
+            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('companyname')}>
+              Company Name {sortConfig.key === 'companyname' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
             </th>
             <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('email')}>
               Email {sortConfig.key === 'email' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
@@ -212,15 +219,15 @@ const AddressBook: React.FC = () => {
           </tr>
         </thead>
         <tbody>
-          {sortedEntries.map((entry) => (
+          {filteredSortedEntries.map((entry) => (
             <tr
               key={entry.id}
               onClick={() => handleEdit(entry)} // Make the row clickable
-              className="cursor-pointer" // Change the cursor to indicate the row is clickable
-              style={entry.UUID === searchedUUID ? { backgroundColor: '#FFD700' } : {}}
-            >
+              className={`cursor-pointer transition duration-300 ease-in-out hover:bg-purple-100`}
+              >
               <td className="px-4 py-2">{entry.UUID}</td>
               <td className="px-4 py-2">{entry.name}</td>
+              <td className="px-4 py-2">{entry.companyname}</td>
               <td className="px-4 py-2">{entry.email}</td>
               <td className="px-4 py-2">{entry.phone}</td>
               <td className="px-4 py-2">{entry.address}</td>
@@ -236,8 +243,9 @@ const AddressBook: React.FC = () => {
         onClearForm={clearFormFields} // Pass the function to clear the form
         onDelete={() => selectedEntry && handleDelete(selectedEntry.id)} // Pass the delete handler
         mode={selectedEntry ? 'edit' : 'add'} // Pass the mode
-        initialData={selectedEntry || { id: 0, UUID: '', name: '', email: '', phone: '', address: '' }} // Pass the initial data
-        children={undefined}      />
+        fetchCustomerData={fetchCustomerData}
+        initialData={selectedEntry || { id: '', UUID: '', name: '', companyname:'', email: '', phone: '', address: '' }} // Pass the initial data
+        children={undefined} />
     </div >
   );
 };
