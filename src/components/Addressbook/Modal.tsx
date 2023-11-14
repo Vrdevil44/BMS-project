@@ -39,7 +39,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
 
     const [formData, setFormData] = useState<FormFields>({
         name: '',
-        companyname:'',
+        companyname: '',
         email: '',
         phone: '',
         address: ''
@@ -80,11 +80,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
 
 
     return (
-        <div className="fixed inset-0 z-50 overflow-auto bg-gray-500 bg-opacity-50 flex">
-            <div className="relative p-8 bg-white w-full max-w-md m-auto flex-col flex rounded-lg shadow">
+        <div className="fixed inset-0 z-50 overflow-auto bg-gray-400 bg-opacity-50 flex">
+            <div className="relative p-8 w-full max-w-md m-auto flex-col flex bg-gray-600 bg-opacity-50 backdrop-blur-sm border border-gray-400 rounded-lg shadow-xl">
                 <button
                     onClick={onClose}
-                    className="absolute top-0 right-0 mt-4 mr-4 bg-red-500 text-white rounded-full p-2 leading-none flex items-center justify-center hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                    className="absolute top-0 right-0 mt-4 mr-4 bg-red-600 text-white rounded-full p-2 leading-none flex items-center justify-center hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-600"
                     style={{ width: '30px', height: '30px' }}
                 >
                     {/* The following SVG is a cross icon */}
@@ -92,7 +92,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
                         <path d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
-                <h2 className="text-2xl font-semibold mb-4 text-gray-800">{title}</h2>
+                <h2 className="text-2xl font-semibold mb-4 text-white">{title}</h2>
                 <form className="mb-6 space-y-4" id="personForm" onSubmit={onSubmit}>
                     <input
                         className="w-full p-2 border rounded text-gray-700"

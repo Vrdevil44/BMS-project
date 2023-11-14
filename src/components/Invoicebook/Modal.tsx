@@ -116,7 +116,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, title, onClose, children, onSubmi
                     </svg>
                 </button>
                 <h2 className="text-2xl font-semibold mb-4 text-gray-800">{title}</h2>
-                <div>
+                <div className="mb-6 space-y-4">
                     <input
                         className="w-full p-2 border rounded text-gray-700"
                         type="text"
