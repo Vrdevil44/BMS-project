@@ -150,11 +150,11 @@ const AddressBook: React.FC = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4 text-gray-800">Customers</h1>
+      <h1 className="text-2xl font-semibold mb-4 text-white">Customers</h1>
       <div className="flex items-center space-x-2 mb-4">
         <button
           onClick={handleAddClick}
-          className="bg-green-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+          className="bg-green-500 hover:bg-blue-600 text-white font-bold px-4 py-2 rounded-md"
         >
           Add
         </button>
@@ -168,7 +168,7 @@ const AddressBook: React.FC = () => {
         
       </div>
 
-      <table className="w-full border divide-y mt-4 text-gray-800">
+      <table className="w-max divide-y mt-4 text-gray-800">
         <thead className="bg-gray-300">
           <tr>
             <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('UUID')}>
@@ -196,14 +196,14 @@ const AddressBook: React.FC = () => {
             <tr
               key={entry.id}
               onClick={() => handleEdit(entry)} // Make the row clickable
-              className={`cursor-pointer transition duration-300 ease-in-out hover:bg-purple-100`}
+              className={`cursor-pointer transition duration-300 ease-in-out hover:bg-gray-900`}
               >
-              <td className="px-4 py-2">{entry.UUID}</td>
-              <td className="px-4 py-2">{entry.name}</td>
-              <td className="px-4 py-2">{entry.companyname}</td>
-              <td className="px-4 py-2">{entry.email}</td>
-              <td className="px-4 py-2">{entry.phone}</td>
-              <td className="px-4 py-2">{entry.address}</td>
+              <td className="text-white px-4 py-2">{entry.UUID}</td>
+              <td className="text-white px-4 py-2">{entry.name}</td>
+              <td className="text-white px-4 py-2">{entry.companyname}</td>
+              <td className="text-white px-4 py-2">{entry.email}</td>
+              <td className="text-white px-4 py-2">{entry.phone}</td>
+              <td className="text-white px-4 py-2">{entry.address}</td>
             </tr>
           ))}
         </tbody>

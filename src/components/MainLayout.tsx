@@ -3,53 +3,62 @@ import AddressBook from './Addressbook/AddressBook';
 import InvoiceBook from './Invoicebook/InvoiceBook';
 
 interface MainLayoutProps {
-  children: React.ReactNode;
+    children: React.ReactNode;
 }
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
-  const [activeTab, setActiveTab] = useState('customers');
+    const [activeTab, setActiveTab] = useState('customers');
 
-  return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar with improved contrast */}
-      <div className="w-64 p-6 bg-gray-800 text-white shadow-lg">
-        {/* Customers Tab */}
-        <button
-          className={`w-full text-left p-4 hover:bg-gray-700 ${
-            activeTab === 'customers' ? 'bg-gray-600' : 'bg-gray-800'
-          }`}
-          onClick={() => setActiveTab('customers')}
-        >
-          Customers
-        </button>
-        {/* Invoices Tab */}
-        <button
-          className={`w-full text-left p-4 hover:bg-gray-700 ${
-            activeTab === 'invoices' ? 'bg-gray-600' : 'bg-gray-800'
-          }`}
-          onClick={() => setActiveTab('invoices')}
-        >
-          Invoices
-        </button>
-      </div>
+    return (
+        <div className="min-w-max min-h-screen bg-gradient-to-br from-gray-950 via-gray-600 to-gray-400 flex flex-col md:flex-row">
+            {/* Sidebar with glassmorphism */}
+            <div className="md:w-40 p-4 backdrop-blur-md bg-white/30 text-white shadow-lg flex flex-row md:flex-col justify-between md:justify-start">
+                {/* Logo or Branding */}
+                <div className="mb-6 text-center md:text-left">
+                    <span className="text-xl font-bold">BMS</span>
+                </div>
+                {/* Navigation Tabs */}
+                <div className="flex-grow md:flex md:flex-col md:justify-between">
+                    <div>
+                        {/* Customers Tab */}
+                        <button
+                            className={`block w-full text-left p-4 hover:bg-white/20 ${activeTab === 'customers' ? 'bg-white/40' : 'bg-transparent'
+                                } rounded-lg transition-colors mb-2`}
+                            onClick={() => setActiveTab('customers')}
+                        >
+                            Customers
+                        </button>
+                        {/* Invoices Tab */}
+                        <button
+                            className={`block w-full text-left p-4 hover:bg-white/20 ${activeTab === 'invoices' ? 'bg-white/40' : 'bg-transparent'
+                                } rounded-lg transition-colors`}
+                            onClick={() => setActiveTab('invoices')}
+                        >
+                            Invoices
+                        </button>
+                    </div>
+                </div>
+            </div>
 
-      {/* Main content */}
-      <div className="flex-grow flex flex-col justify-center sm:py-12">
-        <div className="relative py-3 w-full sm:max-w-4xl mx-auto">
-          <div className="relative px-4 py-10 bg-white shadow rounded-3xl sm:p-10 overflow-auto">
-            {/* Conditional rendering based on the active tab */}
-            {activeTab === 'customers' ? (
-              // Component for customers
-              <AddressBook />
-            ) : (
-              // Component for invoices
-              <InvoiceBook />
-            )}
-          </div>
+            {/* Main content with glassmorphism */}
+            <div className="flex-grow flex flex-col justify-center p-6">
+                <div className="relative max-w-min max-h-min w-min mx-auto">
+                    <div className="relative p-4 backdrop-blur-lg bg-white/30 shadow-xl rounded-3xl overflow-hidden">
+                        {/* Conditional rendering based on the active tab */}
+                        {activeTab === 'customers' ? (
+                            // Component for customers
+                            <AddressBook />
+                        ) : (
+                            // Component for invoices
+                            <InvoiceBook />
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+
+
+    );
 };
 
 export default MainLayout;
