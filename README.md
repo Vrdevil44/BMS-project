@@ -31,45 +31,25 @@ Given the current structure and capabilities of the Business Management System (
 
 1.) Customizable Invoice Templates:
 
-> Template Editor: A built-in editor that allows users to create and modify invoice templates with drag-and-drop elements.
-> Predefined Styles: A selection of predefined invoice templates that users can choose from and customize further.
-> Logo Uploading: Option for businesses to upload their logo and automatically place it on the invoice.
-> Color Schemes: Customizable color schemes to match the branding of the business.
-> Font Choices: A variety of fonts to choose from for personalization of invoices.
-> Field Selection: Ability to select which fields (like tax number, discounts, or notes) appear on the invoice.
-> Multilingual Support: Support for multiple languages on invoices to cater to diverse clientele.
-> Auto-Fill Details | > Template Saving|
+> Template Editor > Predefined Styles > Logo Uploading > Color Schemes > Font Choices > Field Selection > Multilingual Support > Auto-Fill Details > Template Saving|
 
 2.) Dynamic Invoice Creation:
 
-> Interactive Form: A dynamic form that adjusts available fields based on the type of services or products offered.
-> Line Item Customization: Add, remove, or edit line items on the invoice dynamically.
-> Tax and Discount Calculations: Automatic calculation of taxes and discounts based on pre-set or custom rates.
-> Currency Selection: Ability to choose different currencies for invoicing international clients.
+> Interactive Form > Line Item Customization > Tax and Discount Calculations > Currency Selection
 
 3.) Invoice View and Management:
 
-Interactive Invoice Viewer: A viewer that displays the invoice with options to edit, download, or send directly to clients.
-Status Tracking: Tracking the status of each invoice (e.g., unpaid, paid, overdue).
-Payment Integration: Option for clients to pay directly through the invoice view using various payment gateways.
-Commenting System: Ability to add comments or notes to invoices for internal use or client communication.
-Reminder Scheduling: Set reminders for due invoices to notify clients automatically.
-Historical Data: Access to past invoices for each customer for tracking financial history.
-Export Options: Ability to export invoices in various formats like PDF, Excel, or CSV.
-Print-Friendly: A print-friendly version of the invoice for physical mailing or record-keeping.
-Shareable Links: Generation of shareable links for invoices that can be sent to clients.
-Reports and Analytics:
+> Interactive Invoice Viewer > Status Tracking > Payment Integration > Commenting System > Reminder Scheduling > Historical Data > Export Options > Print-Friendly > Shareable Links
 
-Revenue Reports: Visual reports and analytics based on the invoices to understand revenue streams.
-Payment Time Analysis: Average time analysis for payments to forecast cash flow.
-Client-Specific Reports: Reports that show invoicing history and patterns for individual clients.
-Access Control and Security:
+4.) Reports and Analytics:
 
-Role-Based Access: Different access levels for team members to manage invoicing.
-Audit Logs: Detailed logs of all actions taken on invoices for security and accountability.
-Integrations and Extensions:
+> Revenue Reports > Payment Time Analysis > Client-Specific Reports
 
-Accounting Software Integration: Seamless integration with accounting software like QuickBooks or Xero.
-CRM Integration: Synchronization with Customer Relationship Management systems to streamline workflows.
-Email Integration: Automated invoice emailing system with customizable email templates.
+5.) Access Control and Security
+
+> Role-Based Access > Audit Logs
+
+6.) Integrations and Extensions:
+
+> Accounting Software Integration > CRM Integration > Email Integration
 
