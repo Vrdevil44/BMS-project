@@ -7,7 +7,7 @@ Screenshots:
 
 Existing Features and Their Smart Approaches:
 
-Smart Database Integration: The project architecture includes a backend with API endpoints for CRUD operations (create, read, update, delete) on address books and invoice books, indicating a RESTful service design. The system uses a local database (data.db), which suggests swift data retrieval and the potential for offline capabilities.
+1.) Smart Database Integration: The project architecture includes a backend with API endpoints for CRUD operations (create, read, update, delete) on address books and invoice books, indicating a RESTful service design. The system uses a local database (data.db), which suggests swift data retrieval and the potential for offline capabilities.
 
 Intelligent Search Functionality: Both the 'Customers' and 'Invoices' sections offer a search bar that allows users to quickly locate records by UUID or Name, showcasing a smart search feature that enhances user experience by saving time and simplifying navigation.
 
