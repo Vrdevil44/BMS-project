@@ -38,8 +38,7 @@ Given the current structure and capabilities of the Business Management System (
 > Font Choices: A variety of fonts to choose from for personalization of invoices.
 > Field Selection: Ability to select which fields (like tax number, discounts, or notes) appear on the invoice.
 > Multilingual Support: Support for multiple languages on invoices to cater to diverse clientele.
-> Auto-Fill Details: Smart fields that auto-fill with customer or product information saved in the system.
-> Template Saving: Option to save custom templates for future use.
+> Auto-Fill Details | > Template Saving|
 
 2.) Dynamic Invoice Creation:
 
