@@ -33,23 +33,16 @@ const AddressBook: React.FC = () => {
 
   const fetchEntries = async () => {
     try {
-      const response = await fetch('/api/invoicebook/read');
-      if (!response.ok) throw new Error('Failed to fetch');
-      const result = await response.json();
-      // Access the 'data' property of the result
-      if (Array.isArray(result.data)) {
-        setEntries(result.data);
-      } else {
-        // Handle the case where 'data' is not an array
-        console.error('Data property fetched is not an array:', result.data);
-        setEntries([]); // Set entries to an empty array to avoid errors
-      }
+      const records = await pb.collection('invoicebook').getFullList<Entry>({
+        sort: '-created',
+      });
+      setEntries(records);
     } catch (error) {
       console.error('Fetch error:', error);
-      setEntries([]); // Set entries to an empty array to avoid errors
+      setEntries([]);
     }
   };
-  
+
 
   const clearFormFields = () => {
     setSelectedEntry({
@@ -61,22 +54,6 @@ const AddressBook: React.FC = () => {
       phone: '',
       address: '',
     });
-  };
-
-  const handleCRUDOperation = async (url: string, method: string, body?: {}) => {
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) throw new Error('Operation failed');
-      fetchEntries();
-    } catch (error) {
-      console.error('Operation error:', error);
-    }
   };
 
   const handleAddClick = () => {
@@ -95,10 +72,14 @@ const AddressBook: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-  const deleteUrl = `/api/invoicebook/delete/${id}`;
-  await handleCRUDOperation(deleteUrl, 'DELETE',{});
-  setShowModal(false);
-};
+    try {
+      await pb.collection('invoicebook').delete(id);
+      fetchEntries();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
+  };
 
 
   const requestSort = (key: keyof Entry) => {
@@ -133,7 +114,6 @@ const AddressBook: React.FC = () => {
     const formData = new FormData(form);
 
     const entryData = {
-      id: selectedEntry?.id,
       name: formData.get('name'),
       companyname: formData.get('companyname'),
       email: formData.get('email'),
@@ -141,39 +121,44 @@ const AddressBook: React.FC = () => {
       address: formData.get('address'),
     };
 
-    const url = selectedEntry ? '/api/invoicebook/update' : '/api/invoicebook/create';
-    const method = selectedEntry ? 'PUT' : 'POST';
+    try {
+      if (selectedEntry && selectedEntry.id) {
+        await pb.collection('invoicebook').update(selectedEntry.id, entryData);
+      } else {
+        await pb.collection('invoicebook').create(entryData);
+      }
+      fetchEntries();
+      setShowModal(false);
+      setSelectedEntry(null);
+      form.reset();
+    } catch (error) {
+      console.error('Submit error:', error);
+    }
+  };
 
-    await handleCRUDOperation(url, method, entryData);
-
-    setShowModal(false);
-    setSelectedEntry(null);
-    form.reset(); // Reset the form fields after a successful operation
-  }; 
-  
 
   async function fetchCustomerData(uuid: string): Promise<Entry | null> {
     try {
-        // Replace 'uuidFieldName' with the actual field name in your 'addressbook' collection that holds the UUID
-        const record = await pb.collection('addressbook').getFirstListItem(`UUID="${uuid}"`);
-        if (record) {
-            return {
-                id: record.id, // or any other necessary field from the record
-                UUID: record.UUID, // or the respective field
-                name: record.name,
-                companyname: record.companyname,
-                email: record.email,
-                phone: record.phone,
-                address: record.address
-            };
-        } else {
-            return null;
-        }
-    } catch (error) {
-        console.error("Error fetching customer data:", error);
+      // Replace 'uuidFieldName' with the actual field name in your 'addressbook' collection that holds the UUID
+      const record = await pb.collection('addressbook').getFirstListItem(`UUID="${uuid}"`);
+      if (record) {
+        return {
+          id: record.id, // or any other necessary field from the record
+          UUID: record.UUID, // or the respective field
+          name: record.name,
+          companyname: record.companyname,
+          email: record.email,
+          phone: record.phone,
+          address: record.address
+        };
+      } else {
         return null;
+      }
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+      return null;
     }
-}
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -192,7 +177,7 @@ const AddressBook: React.FC = () => {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)} // Update searchInput as user types
         />
-        
+
       </div>
 
       <table className="w-full border divide-y mt-4 text-gray-800">
@@ -224,7 +209,7 @@ const AddressBook: React.FC = () => {
               key={entry.id}
               onClick={() => handleEdit(entry)} // Make the row clickable
               className={`cursor-pointer transition duration-300 ease-in-out hover:bg-purple-100`}
-              >
+            >
               <td className="px-4 py-2">{entry.UUID}</td>
               <td className="px-4 py-2">{entry.name}</td>
               <td className="px-4 py-2">{entry.companyname}</td>
@@ -244,7 +229,7 @@ const AddressBook: React.FC = () => {
         onDelete={() => selectedEntry && handleDelete(selectedEntry.id)} // Pass the delete handler
         mode={selectedEntry ? 'edit' : 'add'} // Pass the mode
         fetchCustomerData={fetchCustomerData}
-        initialData={selectedEntry || { id: '', UUID: '', name: '', companyname:'', email: '', phone: '', address: '' }} // Pass the initial data
+        initialData={selectedEntry || { id: '', UUID: '', name: '', companyname: '', email: '', phone: '', address: '' }} // Pass the initial data
         children={undefined} />
     </div >
   );

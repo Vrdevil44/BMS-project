@@ -1,5 +1,8 @@
 import React, { useState, useEffect, FormEvent, useMemo } from 'react';
 import Modal from './Modal';
+import PocketBase from 'pocketbase';
+
+const pb = new PocketBase('http://127.0.0.1:8090');
 
 interface Entry {
   id: string;
@@ -29,23 +32,15 @@ const AddressBook: React.FC = () => {
 
   const fetchEntries = async () => {
     try {
-      const response = await fetch('/api/addressbook/read');
-      if (!response.ok) throw new Error('Failed to fetch');
-      const result = await response.json();
-      // Access the 'data' property of the result
-      if (Array.isArray(result.data)) {
-        setEntries(result.data);
-      } else {
-        // Handle the case where 'data' is not an array
-        console.error('Data property fetched is not an array:', result.data);
-        setEntries([]); // Set entries to an empty array to avoid errors
-      }
+      const records = await pb.collection('addressbook').getFullList<Entry>({
+        sort: '-created',
+      });
+      setEntries(records);
     } catch (error) {
       console.error('Fetch error:', error);
-      setEntries([]); // Set entries to an empty array to avoid errors
+      setEntries([]);
     }
   };
-  
 
   const clearFormFields = () => {
     setSelectedEntry({
@@ -57,22 +52,6 @@ const AddressBook: React.FC = () => {
       phone: '',
       address: '',
     });
-  };
-
-  const handleCRUDOperation = async (url: string, method: string, body?: {}) => {
-    try {
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) throw new Error('Operation failed');
-      fetchEntries();
-    } catch (error) {
-      console.error('Operation error:', error);
-    }
   };
 
   const handleAddClick = () => {
@@ -91,10 +70,14 @@ const AddressBook: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-  const deleteUrl = `/api/addressbook/delete/${id}`;
-  await handleCRUDOperation(deleteUrl, 'DELETE',{});
-  setShowModal(false);
-};
+    try {
+      await pb.collection('addressbook').delete(id);
+      fetchEntries();
+      setShowModal(false);
+    } catch (error) {
+      console.error('Delete error:', error);
+    }
+  };
 
 
   const requestSort = (key: keyof Entry) => {
@@ -129,7 +112,6 @@ const AddressBook: React.FC = () => {
     const formData = new FormData(form);
 
     const entryData = {
-      id: selectedEntry?.id,
       name: formData.get('name'),
       companyname: formData.get('companyname'),
       email: formData.get('email'),
@@ -137,15 +119,20 @@ const AddressBook: React.FC = () => {
       address: formData.get('address'),
     };
 
-    const url = selectedEntry ? '/api/addressbook/update' : '/api/addressbook/create';
-    const method = selectedEntry ? 'PUT' : 'POST';
-
-    await handleCRUDOperation(url, method, entryData);
-
-    setShowModal(false);
-    setSelectedEntry(null);
-    form.reset(); // Reset the form fields after a successful operation
-  }; 
+    try {
+      if (selectedEntry && selectedEntry.id) {
+        await pb.collection('addressbook').update(selectedEntry.id, entryData);
+      } else {
+        await pb.collection('addressbook').create(entryData);
+      }
+      fetchEntries();
+      setShowModal(false);
+      setSelectedEntry(null);
+      form.reset();
+    } catch (error) {
+      console.error('Submit error:', error);
+    }
+  };
   
 
   return (
