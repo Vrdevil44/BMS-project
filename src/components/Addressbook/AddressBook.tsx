@@ -1,8 +1,6 @@
 import React, { useState, useEffect, FormEvent, useMemo } from 'react';
 import Modal from './Modal';
-import PocketBase from 'pocketbase';
-
-const pb = new PocketBase('http://127.0.0.1:8090');
+import { store } from '../../data';
 
 interface Entry {
   id: string;
@@ -32,9 +30,7 @@ const AddressBook: React.FC = () => {
 
   const fetchEntries = async () => {
     try {
-      const records = await pb.collection('addressbook').getFullList<Entry>({
-        sort: '-created',
-      });
+      const records = await store.list('addressbook');
       setEntries(records);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -71,7 +67,7 @@ const AddressBook: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await pb.collection('addressbook').delete(id);
+      await store.remove('addressbook', id);
       fetchEntries();
       setShowModal(false);
     } catch (error) {
@@ -121,9 +117,9 @@ const AddressBook: React.FC = () => {
 
     try {
       if (selectedEntry && selectedEntry.id) {
-        await pb.collection('addressbook').update(selectedEntry.id, entryData);
+        await store.update('addressbook', selectedEntry.id, entryData as any);
       } else {
-        await pb.collection('addressbook').create(entryData);
+        await store.create('addressbook', entryData as any);
       }
       fetchEntries();
       setShowModal(false);

@@ -1,9 +1,6 @@
 import React, { useState, useEffect, FormEvent, useMemo } from 'react';
 import Modal from './Modal';
-import PocketBase from 'pocketbase';
-
-
-const pb = new PocketBase('http://127.0.0.1:8090'); // Adjust the URL as needed
+import { store } from '../../data';
 
 interface Entry {
   id: string;
@@ -33,9 +30,7 @@ const AddressBook: React.FC = () => {
 
   const fetchEntries = async () => {
     try {
-      const records = await pb.collection('invoicebook').getFullList<Entry>({
-        sort: '-created',
-      });
+      const records = await store.list('invoicebook');
       setEntries(records);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -73,7 +68,7 @@ const AddressBook: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      await pb.collection('invoicebook').delete(id);
+      await store.remove('invoicebook', id);
       fetchEntries();
       setShowModal(false);
     } catch (error) {
@@ -123,9 +118,9 @@ const AddressBook: React.FC = () => {
 
     try {
       if (selectedEntry && selectedEntry.id) {
-        await pb.collection('invoicebook').update(selectedEntry.id, entryData);
+        await store.update('invoicebook', selectedEntry.id, entryData as any);
       } else {
-        await pb.collection('invoicebook').create(entryData);
+        await store.create('invoicebook', entryData as any);
       }
       fetchEntries();
       setShowModal(false);
@@ -140,7 +135,7 @@ const AddressBook: React.FC = () => {
   async function fetchCustomerData(uuid: string): Promise<Entry | null> {
     try {
       // Replace 'uuidFieldName' with the actual field name in your 'addressbook' collection that holds the UUID
-      const record = await pb.collection('addressbook').getFirstListItem(`UUID="${uuid}"`);
+      const record = await store.findByUUID('addressbook', uuid);
       if (record) {
         return {
           id: record.id, // or any other necessary field from the record
