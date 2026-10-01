@@ -36,3 +36,7 @@ next-env.d.ts
 
 # binaries
 *.exe
+
+# local backend data (demo uses localStorage)
+pb_data/
+addressbook.db
