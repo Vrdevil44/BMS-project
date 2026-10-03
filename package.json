@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "tsx --test src/lib/currency.test.ts src/lib/lib.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "13.5.4",
@@ -20,8 +22,11 @@
     "@types/react": "^18.2.37",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "autoprefixer": "^10.4.16",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^13.5.4",
     "postcss": "^8.4.31",
     "tailwindcss": "^3.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.2.2"
   },
   "engines": {
