@@ -23,12 +23,13 @@ interface DialogProps {
     title: string;
     variant: DialogVariant;
     onClose: () => void;
+    wide?: boolean;
     children: (titleId: string) => React.ReactNode;
 }
 
 // Modal dialog: Escape closes, Tab is trapped inside, focus moves in on open
 // and returns to the opener on close. Mount it only while open.
-const Dialog: React.FC<DialogProps> = ({ title, variant, onClose, children }) => {
+const Dialog: React.FC<DialogProps> = ({ title, variant, onClose, wide, children }) => {
     const panelRef = useRef<HTMLDivElement>(null);
     const onCloseRef = useRef(onClose);
     onCloseRef.current = onClose;
@@ -72,7 +73,7 @@ const Dialog: React.FC<DialogProps> = ({ title, variant, onClose, children }) =>
                 aria-modal="true"
                 aria-labelledby={titleId}
                 tabIndex={-1}
-                className={`relative p-8 w-full max-w-md m-auto flex-col flex focus:outline-none ${s.panel}`}
+                className={`relative p-8 w-full ${wide ? 'max-w-3xl' : 'max-w-md'} m-auto flex-col flex focus:outline-none ${s.panel}`}
             >
                 <button
                     type="button"

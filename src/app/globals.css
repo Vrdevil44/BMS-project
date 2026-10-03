@@ -27,3 +27,24 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* Invoice PDF export: the invoice is portaled into #invoice-print-root and is
+   the only thing printed. Use the browser's "Save as PDF" destination. */
+#invoice-print-root {
+  display: none;
+}
+
+@media print {
+  body > *:not(#invoice-print-root) {
+    display: none !important;
+  }
+  #invoice-print-root {
+    display: block;
+  }
+  body {
+    background: #fff;
+  }
+  @page {
+    margin: 16mm;
+  }
+}
