@@ -6,4 +6,4 @@ export const store: DataStore =
   process.env.NEXT_PUBLIC_BMS_BACKEND === 'pocketbase' ? pocketbaseStore : localStore;
 
 export { resetDemoData } from './localStore';
-export type { Entry, CollectionName } from './types';
+export type { Entry, EntryInput, CollectionName, InvoiceStatus, InvoiceLine } from './types';

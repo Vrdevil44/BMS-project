@@ -2,23 +2,44 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import EntryDialog from '../EntryDialog';
 import { store, Entry } from '../../data';
 import { EntryValues } from '../../lib/validation';
+import CustomerDetail from './CustomerDetail';
+import { compareValues, customerInvoices, formatMoneyMap, isOverdue, isoDate, matchesQuery, totalBilled } from '../../lib/invoice';
+
+type SortKey = keyof Entry | 'invoiceCount';
+type OpenFilter = 'all' | 'open' | 'overdue' | 'none';
 
 interface SortConfig {
-  key: keyof Entry;
+  key: SortKey;
   direction: 'ascending' | 'descending';
 }
 
-const COLUMNS: { key: keyof Entry; label: string }[] = [
+const COLUMNS: { key: SortKey; label: string }[] = [
   { key: 'UUID', label: 'UUID' },
   { key: 'name', label: 'Name' },
   { key: 'companyname', label: 'Company Name' },
   { key: 'email', label: 'Email' },
   { key: 'phone', label: 'Phone' },
   { key: 'address', label: 'Address' },
+  { key: 'invoiceCount', label: 'Invoices' },
 ];
 
-const AddressBook: React.FC = () => {
+const OPEN_FILTERS: { value: OpenFilter; label: string }[] = [
+  { value: 'all', label: 'All customers' },
+  { value: 'open', label: 'Has unpaid invoices' },
+  { value: 'overdue', label: 'Has overdue invoices' },
+  { value: 'none', label: 'No invoices' },
+];
+
+interface AddressBookProps {
+  onOpenInvoice?: (id: string) => void;
+  onNewInvoice?: (customerUUID: string) => void;
+}
+
+const AddressBook: React.FC<AddressBookProps> = ({ onOpenInvoice, onNewInvoice }) => {
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [invoices, setInvoices] = useState<Entry[]>([]);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [openFilter, setOpenFilter] = useState<OpenFilter>('all');
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
@@ -28,8 +49,9 @@ const AddressBook: React.FC = () => {
 
   const fetchEntries = useCallback(async () => {
     try {
-      const records = await store.list('addressbook');
+      const [records, invs] = await Promise.all([store.list('addressbook'), store.list('invoicebook')]);
       setEntries(records);
+      setInvoices(invs);
       setLoadError(false);
     } catch (error) {
       console.error('Fetch error:', error);
@@ -62,6 +84,7 @@ const AddressBook: React.FC = () => {
   const handleDelete = async () => {
     if (!selectedEntry) return;
     await store.remove('addressbook', selectedEntry.id);
+    setDetailId(null);
     await fetchEntries();
     handleCloseModal();
   };
@@ -76,28 +99,48 @@ const AddressBook: React.FC = () => {
     handleCloseModal();
   };
 
-  const requestSort = (key: keyof Entry) => {
+  const requestSort = (key: SortKey) => {
     setSortConfig({
       key,
       direction: sortConfig.key === key && sortConfig.direction === 'ascending' ? 'descending' : 'ascending',
     });
   };
 
+  const today = isoDate(new Date());
+
+  const stats = useMemo(() => {
+    const m = new Map<string, { count: number; open: boolean; overdue: boolean; billed: string }>();
+    for (const c of entries) {
+      const mine = customerInvoices(c, invoices);
+      m.set(c.id, {
+        count: mine.length,
+        open: mine.some((i) => i.status === 'sent'),
+        overdue: mine.some((i) => isOverdue(i, today)),
+        billed: formatMoneyMap(totalBilled(mine)),
+      });
+    }
+    return m;
+  }, [entries, invoices, today]);
+
   const filteredSortedEntries = useMemo(() => {
-    const q = searchInput.toLowerCase();
-    const filtered = entries.filter(
-      (entry) => entry.name.toLowerCase().includes(q) || entry.UUID.toLowerCase().includes(q),
-    );
-    return filtered.sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'ascending' ? -1 : 1;
-      }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'ascending' ? 1 : -1;
-      }
-      return 0;
-    });
-  }, [entries, sortConfig, searchInput]);
+    const countOf = (e: Entry) => stats.get(e.id)?.count ?? 0;
+    return entries
+      .filter((e) => matchesQuery(e, searchInput, ['UUID', 'name', 'companyname', 'email', 'phone', 'address']))
+      .filter((e) => {
+        const st = stats.get(e.id);
+        if (openFilter === 'open') return !!st?.open;
+        if (openFilter === 'overdue') return !!st?.overdue;
+        if (openFilter === 'none') return countOf(e) === 0;
+        return true;
+      })
+      .sort((a, b) =>
+        sortConfig.key === 'invoiceCount'
+          ? compareValues(countOf(a), countOf(b), sortConfig.direction)
+          : compareValues(String(a[sortConfig.key] ?? ''), String(b[sortConfig.key] ?? ''), sortConfig.direction),
+      );
+  }, [entries, stats, sortConfig, searchInput, openFilter]);
+
+  const detailCustomer = detailId ? entries.find((e) => e.id === detailId) ?? null : null;
 
   let statusMessage: React.ReactNode = null;
   if (loading) statusMessage = <p role="status" className="mt-4 text-white">Loading customers…</p>;
@@ -111,7 +154,40 @@ const AddressBook: React.FC = () => {
   else if (entries.length === 0)
     statusMessage = <p role="status" className="mt-4 text-white">No customers yet. Use Add to create the first one.</p>;
   else if (filteredSortedEntries.length === 0)
-    statusMessage = <p role="status" className="mt-4 text-white">No customers match “{searchInput}”.</p>;
+    statusMessage = (
+      <p role="status" className="mt-4 text-white">No customers match{searchInput.trim() ? ` “${searchInput}”` : ' this filter'}.{' '}
+        <button type="button" className="underline" onClick={() => { setSearchInput(''); setOpenFilter('all'); }}>Clear filters</button>
+      </p>
+    );
+
+  const dialog = showModal && (
+    <EntryDialog
+      variant="dark"
+      title={selectedEntry ? 'Edit Customer Details' : 'Add a New Customer'}
+      noun="customer"
+      initialData={selectedEntry}
+      onClose={handleCloseModal}
+      onSave={handleSave}
+      onDelete={handleDelete}
+    />
+  );
+
+  if (detailCustomer) {
+    return (
+      <>
+        <CustomerDetail
+          customer={detailCustomer}
+          invoices={invoices}
+          today={today}
+          onBack={() => setDetailId(null)}
+          onEdit={() => handleEdit(detailCustomer)}
+          onOpenInvoice={(id) => onOpenInvoice?.(id)}
+          onNewInvoice={(uuid) => onNewInvoice?.(uuid)}
+        />
+        {dialog}
+      </>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -124,15 +200,19 @@ const AddressBook: React.FC = () => {
         >
           Add
         </button>
-        <label htmlFor="customers-search" className="sr-only">Search customers by UUID or name</label>
+        <label htmlFor="customers-search" className="sr-only">Search customers by ID, name, company, email, phone or address</label>
         <input
           id="customers-search"
           className="w-full p-2 border rounded text-gray-700"
           type="text"
-          placeholder="Enter UUID or Name to search"
+          placeholder="Search name, company, email, phone…"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
+        <label htmlFor="customers-filter" className="sr-only">Filter customers</label>
+        <select id="customers-filter" className="p-2 border rounded text-gray-700" value={openFilter} onChange={(e) => setOpenFilter(e.target.value as OpenFilter)}>
+          {OPEN_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
       </div>
 
       <table className="w-max divide-y mt-4 text-gray-800">
@@ -161,7 +241,7 @@ const AddressBook: React.FC = () => {
           {filteredSortedEntries.map((entry) => (
             <tr
               key={entry.id}
-              onClick={() => handleEdit(entry)}
+              onClick={() => setDetailId(entry.id)}
               className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-900"
             >
               <td className="text-white px-4 py-2">{entry.UUID}</td>
@@ -169,7 +249,7 @@ const AddressBook: React.FC = () => {
                 <button
                   type="button"
                   className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded"
-                  aria-label={`Edit ${entry.name}`}
+                  aria-label={`View ${entry.name}`}
                 >
                   {entry.name}
                 </button>
@@ -178,22 +258,13 @@ const AddressBook: React.FC = () => {
               <td className="text-white px-4 py-2">{entry.email}</td>
               <td className="text-white px-4 py-2">{entry.phone}</td>
               <td className="text-white px-4 py-2">{entry.address}</td>
+              <td className="text-white px-4 py-2 text-center" title={stats.get(entry.id)?.billed}>{stats.get(entry.id)?.count ?? 0}</td>
             </tr>
           ))}
         </tbody>
       </table>
       {statusMessage}
-      {showModal && (
-        <EntryDialog
-          variant="dark"
-          title={selectedEntry ? 'Edit Customer Details' : 'Add a New Customer'}
-          noun="customer"
-          initialData={selectedEntry}
-          onClose={handleCloseModal}
-          onSave={handleSave}
-          onDelete={handleDelete}
-        />
-      )}
+      {dialog}
     </div>
   );
 };
