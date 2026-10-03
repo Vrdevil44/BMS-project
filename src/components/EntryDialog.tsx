@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog, { DialogVariant } from './Dialog';
+import { BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, ERROR_BOX, INPUT } from './ui';
 import { EntryValues, FieldErrors, validateEntry } from '../lib/validation';
 
 const EMPTY: EntryValues = { name: '', companyname: '', email: '', phone: '', address: '' };
-const INPUT = 'w-full p-2 border rounded text-gray-700';
 
 const FIELDS: { name: keyof EntryValues; label: string; type: string; autoComplete: string; required?: boolean }[] = [
     { name: 'name', label: 'Name', type: 'text', autoComplete: 'off', required: true },
@@ -28,7 +28,7 @@ interface EntryDialogProps {
 }
 
 const ErrorText: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => (
-    <p id={id} className="mt-1 text-sm text-red-700 bg-red-50 rounded px-2 py-1">{children}</p>
+    <p id={id} className={`mt-1 ${ERROR_BOX}`}>{children}</p>
 );
 
 const EntryDialog: React.FC<EntryDialogProps> = ({ variant, title, noun, initialData, onClose, onSave, onDelete, lookupCustomer }) => {
@@ -122,9 +122,7 @@ const EntryDialog: React.FC<EntryDialogProps> = ({ variant, title, noun, initial
         }
     };
 
-    const saveColor = isEdit ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800';
-
-    return (
+        return (
         <Dialog title={title} variant={variant} onClose={onClose}>
             {() => (
                 <>
@@ -149,7 +147,7 @@ const EntryDialog: React.FC<EntryDialogProps> = ({ variant, title, noun, initial
                                 type="button"
                                 onClick={handleLookup}
                                 disabled={lookupBusy}
-                                className="bg-blue-700 hover:bg-blue-800 disabled:opacity-60 text-white px-4 py-2 rounded-md"
+                                className={BTN_SECONDARY}
                             >
                                 {lookupBusy ? 'Fetching…' : 'Fetch Customer'}
                             </button>
@@ -182,17 +180,17 @@ const EntryDialog: React.FC<EntryDialogProps> = ({ variant, title, noun, initial
                         })}
 
                         {formError && (
-                            <p role="alert" className="text-sm text-red-700 bg-red-50 rounded px-2 py-1">{formError}</p>
+                            <p role="alert" className={ERROR_BOX}>{formError}</p>
                         )}
 
                         {confirmingDelete ? (
-                            <div role="alertdialog" aria-label={`Confirm delete ${noun}`} className="rounded border border-red-300 bg-red-50 p-3 text-red-900">
+                            <div role="alertdialog" aria-label={`Confirm delete ${noun}`} className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
                                 <p className="mb-3">Delete this {noun}? This cannot be undone.</p>
                                 <button
                                     type="button"
                                     onClick={handleConfirmDelete}
                                     disabled={busy}
-                                    className="bg-red-700 hover:bg-red-800 disabled:opacity-60 text-white px-4 py-2 rounded-md mr-2"
+                                    className={`${BTN_DANGER} mr-2`}
                                 >
                                     Yes, delete
                                 </button>
@@ -201,26 +199,26 @@ const EntryDialog: React.FC<EntryDialogProps> = ({ variant, title, noun, initial
                                     ref={keepRef}
                                     onClick={() => setConfirmingDelete(false)}
                                     disabled={busy}
-                                    className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-md"
+                                    className={BTN_SECONDARY}
                                 >
                                     Keep it
                                 </button>
                             </div>
                         ) : (
                             <>
-                                <button type="submit" disabled={busy} className={`${saveColor} disabled:opacity-60 text-white px-4 py-2 rounded-md mr-2`}>
+                                <button type="submit" disabled={busy} className={`${BTN_PRIMARY} mr-2`}>
                                     {busy ? 'Saving…' : isEdit ? 'Update' : 'Add'}
                                 </button>
                                 {isEdit ? (
                                     <button
                                         type="button"
-                                        className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md"
+                                        className={BTN_DANGER}
                                         onClick={() => setConfirmingDelete(true)}
                                     >
                                         Delete
                                     </button>
                                 ) : (
-                                    <button type="button" onClick={onClose} className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md">
+                                    <button type="button" onClick={onClose} className={BTN_SECONDARY}>
                                         Cancel
                                     </button>
                                 )}

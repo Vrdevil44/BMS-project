@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog from '../Dialog';
+import { BTN_DANGER, BTN_PRIMARY, BTN_SECONDARY, ERROR_BOX, INPUT } from '../ui';
 import { Entry, EntryInput, InvoiceStatus } from '../../data';
 import { computeTotals, formatMinor, parseAmountToMinor, parsePercentToBps, parseQuantityToMilli } from '../../lib/currency';
 import {
@@ -7,7 +8,6 @@ import {
 } from '../../lib/invoice';
 import { FieldErrors, validateDueAfterIssue, validateIsoDate } from '../../lib/validation';
 
-const INPUT = 'w-full p-2 border rounded text-gray-700';
 
 interface LineDraft {
   description: string;
@@ -27,12 +27,12 @@ interface InvoiceDialogProps {
 }
 
 const Err: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => (
-  <p id={id} className="mt-1 text-sm text-red-700 bg-red-50 rounded px-2 py-1">{children}</p>
+  <p id={id} className={`mt-1 ${ERROR_BOX}`}>{children}</p>
 );
 
 const Field: React.FC<{ id: string; label: string; error?: string; children: React.ReactNode }> = ({ id, label, error, children }) => (
   <div>
-    <label htmlFor={id} className="block text-sm text-gray-800 mb-1">{label}</label>
+    <label htmlFor={id} className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</label>
     {children}
     {error && <Err id={`${id}-error`}>{error}</Err>}
   </div>
@@ -164,7 +164,6 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({ invoice, customers, custo
 
   const err = (k: string) => errors[k];
   const aria = (id: string, k: string) => ({ 'aria-invalid': !!err(k), 'aria-describedby': err(k) ? `${id}-error` : undefined });
-  const saveColor = isEdit ? 'bg-blue-700 hover:bg-blue-800' : 'bg-green-700 hover:bg-green-800';
 
   return (
     <Dialog title={isEdit ? `Edit Invoice ${invoice?.UUID}` : 'Add a New Invoice'} variant="light" onClose={onClose} wide>
@@ -220,23 +219,23 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({ invoice, customers, custo
           </div>
 
           <fieldset>
-            <legend className="text-sm text-gray-800 mb-1">Line items</legend>
+            <legend className="mb-1 text-sm font-medium text-slate-700 dark:text-slate-300">Line items</legend>
             <div className="space-y-2">
               {lines.map((l, i) => (
                 <div key={i}>
-                  <div className="flex gap-2 items-start">
-                    <input aria-label={`Line ${i + 1} description`} data-field={`line-${i}`} className={`${INPUT} flex-grow`} type="text" placeholder="Description"
+                  <div className="flex flex-wrap items-start gap-2 sm:flex-nowrap">
+                    <input aria-label={`Line ${i + 1} description`} data-field={`line-${i}`} className={`${INPUT} min-w-0 basis-full flex-grow sm:basis-auto`} type="text" placeholder="Description"
                       value={l.description} onChange={(e) => setLine(i, { description: e.target.value })} aria-invalid={!!err(`line-${i}`)} aria-describedby={err(`line-${i}`) ? `line-${i}-error` : undefined} />
-                    <input aria-label={`Line ${i + 1} quantity`} className={`${INPUT} w-20`} type="text" inputMode="decimal" placeholder="Qty"
+                    <input aria-label={`Line ${i + 1} quantity`} className={`${INPUT} w-20 flex-1 sm:w-20 sm:flex-none`} type="text" inputMode="decimal" placeholder="Qty"
                       value={l.qty} onChange={(e) => setLine(i, { qty: e.target.value })} />
-                    <input aria-label={`Line ${i + 1} rate`} className={`${INPUT} w-28`} type="text" inputMode="decimal" placeholder="Rate"
+                    <input aria-label={`Line ${i + 1} rate`} className={`${INPUT} w-28 flex-1 sm:w-28 sm:flex-none`} type="text" inputMode="decimal" placeholder="Rate"
                       value={l.rate} onChange={(e) => setLine(i, { rate: e.target.value })} />
                     <button
                       type="button"
                       aria-label={`Remove line ${i + 1}`}
                       disabled={lines.length === 1}
                       onClick={() => setLines((ls) => ls.filter((_, j) => j !== i))}
-                      className="bg-red-700 hover:bg-red-800 disabled:opacity-40 text-white px-3 py-2 rounded-md"
+                      className={`${BTN_DANGER} !px-3 disabled:opacity-40`}
                     >
                       ×
                     </button>
@@ -246,12 +245,12 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({ invoice, customers, custo
               ))}
             </div>
             <button type="button" onClick={() => setLines((ls) => [...ls, { description: '', qty: '1', rate: '' }])}
-              className="mt-2 bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded-md text-sm">
+              className={`${BTN_SECONDARY} mt-2 !py-1`}>
               Add line
             </button>
           </fieldset>
 
-          <dl className="ml-auto w-64 grid grid-cols-2 gap-y-1 text-right text-gray-800" aria-live="polite">
+          <dl className="ml-auto grid w-full max-w-xs grid-cols-2 gap-y-1 text-right" aria-live="polite">
             <dt>Subtotal</dt><dd>{formatMinor(preview.subtotalMinor, currency)}</dd>
             <dt>Tax</dt><dd>{formatMinor(preview.taxMinor, currency)}</dd>
             <dt className="font-bold">Total</dt><dd className="font-bold">{formatMinor(preview.totalMinor, currency)}</dd>
@@ -262,29 +261,29 @@ const InvoiceDialog: React.FC<InvoiceDialogProps> = ({ invoice, customers, custo
               onChange={(e) => { setNotes(e.target.value); clear('notes'); }} {...aria('inv-notes', 'notes')} />
           </Field>
 
-          {formError && <p role="alert" className="text-sm text-red-700 bg-red-50 rounded px-2 py-1">{formError}</p>}
+          {formError && <p role="alert" className={ERROR_BOX}>{formError}</p>}
 
           {confirmingDelete ? (
-            <div role="alertdialog" aria-label="Confirm delete invoice" className="rounded border border-red-300 bg-red-50 p-3 text-red-900">
+            <div role="alertdialog" aria-label="Confirm delete invoice" className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
               <p className="mb-3">Delete this invoice? This cannot be undone.</p>
-              <button type="button" onClick={handleConfirmDelete} disabled={busy} className="bg-red-700 hover:bg-red-800 disabled:opacity-60 text-white px-4 py-2 rounded-md mr-2">
+              <button type="button" onClick={handleConfirmDelete} disabled={busy} className={`${BTN_DANGER} mr-2`}>
                 Yes, delete
               </button>
-              <button type="button" ref={keepRef} onClick={() => setConfirmingDelete(false)} disabled={busy} className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-md">
+              <button type="button" ref={keepRef} onClick={() => setConfirmingDelete(false)} disabled={busy} className={BTN_SECONDARY}>
                 Keep it
               </button>
             </div>
           ) : (
             <>
-              <button type="submit" disabled={busy} className={`${saveColor} disabled:opacity-60 text-white px-4 py-2 rounded-md mr-2`}>
+              <button type="submit" disabled={busy} className={`${BTN_PRIMARY} mr-2`}>
                 {busy ? 'Saving…' : isEdit ? 'Update' : 'Add'}
               </button>
               {isEdit ? (
-                <button type="button" className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md" onClick={() => setConfirmingDelete(true)}>
+                <button type="button" className={BTN_DANGER} onClick={() => setConfirmingDelete(true)}>
                   Delete
                 </button>
               ) : (
-                <button type="button" onClick={onClose} className="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-md">
+                <button type="button" onClick={onClose} className={BTN_SECONDARY}>
                   Cancel
                 </button>
               )}

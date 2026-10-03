@@ -3,6 +3,9 @@ import EntryDialog from '../EntryDialog';
 import { store, Entry } from '../../data';
 import { EntryValues } from '../../lib/validation';
 import CustomerDetail from './CustomerDetail';
+import {
+  BTN_PRIMARY, INPUT, LINK, LoadingBlock, PAGE_TITLE, ROW_BTN, SUBTLE, TABLE, TABLE_WRAP, TBODY, TD, TH, THEAD, TR_CLICK, FOCUS,
+} from '../ui';
 import { compareValues, customerInvoices, formatMoneyMap, isOverdue, isoDate, matchesQuery, totalBilled } from '../../lib/invoice';
 
 type SortKey = keyof Entry | 'invoiceCount';
@@ -143,20 +146,20 @@ const AddressBook: React.FC<AddressBookProps> = ({ onOpenInvoice, onNewInvoice }
   const detailCustomer = detailId ? entries.find((e) => e.id === detailId) ?? null : null;
 
   let statusMessage: React.ReactNode = null;
-  if (loading) statusMessage = <p role="status" className="mt-4 text-white">Loading customers…</p>;
+  if (loading) statusMessage = <LoadingBlock label="Loading customers…" />;
   else if (loadError)
     statusMessage = (
-      <p role="alert" className="mt-4 text-white">
+      <p role="alert" className={`mt-4 ${SUBTLE}`}>
         Could not load customers.{' '}
-        <button type="button" className="underline" onClick={() => { setLoading(true); fetchEntries(); }}>Try again</button>
+        <button type="button" className={LINK} onClick={() => { setLoading(true); fetchEntries(); }}>Try again</button>
       </p>
     );
   else if (entries.length === 0)
-    statusMessage = <p role="status" className="mt-4 text-white">No customers yet. Use Add to create the first one.</p>;
+    statusMessage = <p role="status" className={`mt-4 ${SUBTLE}`}>No customers yet. Use Add to create the first one.</p>;
   else if (filteredSortedEntries.length === 0)
     statusMessage = (
-      <p role="status" className="mt-4 text-white">No customers match{searchInput.trim() ? ` “${searchInput}”` : ' this filter'}.{' '}
-        <button type="button" className="underline" onClick={() => { setSearchInput(''); setOpenFilter('all'); }}>Clear filters</button>
+      <p role="status" className={`mt-4 ${SUBTLE}`}>No customers match{searchInput.trim() ? ` “${searchInput}”` : ' this filter'}.{' '}
+        <button type="button" className={LINK} onClick={() => { setSearchInput(''); setOpenFilter('all'); }}>Clear filters</button>
       </p>
     );
 
@@ -190,79 +193,70 @@ const AddressBook: React.FC<AddressBookProps> = ({ onOpenInvoice, onNewInvoice }
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4 text-white">Customers</h1>
-      <div className="flex items-center space-x-2 mb-4">
-        <button
-          type="button"
-          onClick={handleAddClick}
-          className="bg-green-700 hover:bg-green-800 text-white font-bold px-4 py-2 rounded-md"
-        >
+    <div>
+      <h1 className={`${PAGE_TITLE} mb-4`}>Customers</h1>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={handleAddClick} className={BTN_PRIMARY}>
           Add
         </button>
         <label htmlFor="customers-search" className="sr-only">Search customers by ID, name, company, email, phone or address</label>
         <input
           id="customers-search"
-          className="w-full p-2 border rounded text-gray-700"
+          data-search=""
+          className={`${INPUT} min-w-0 flex-1 basis-48`}
           type="text"
-          placeholder="Search name, company, email, phone…"
+          placeholder="Search name, company, email, phone…  ( / )"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
         <label htmlFor="customers-filter" className="sr-only">Filter customers</label>
-        <select id="customers-filter" className="p-2 border rounded text-gray-700" value={openFilter} onChange={(e) => setOpenFilter(e.target.value as OpenFilter)}>
+        <select id="customers-filter" className={`${INPUT} w-auto`} value={openFilter} onChange={(e) => setOpenFilter(e.target.value as OpenFilter)}>
           {OPEN_FILTERS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
       </div>
 
-      <table className="w-max divide-y mt-4 text-gray-800">
-        <caption className="sr-only">Customers list, sortable by column</caption>
-        <thead className="bg-gray-300">
-          <tr>
-            {COLUMNS.map((col) => (
-              <th
-                key={col.key}
-                scope="col"
-                className="px-4 py-2"
-                aria-sort={sortConfig.key === col.key ? sortConfig.direction : 'none'}
-              >
-                <button
-                  type="button"
-                  className="font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-800 rounded"
-                  onClick={() => requestSort(col.key)}
+      <div className={TABLE_WRAP}>
+        <table className={`${TABLE} min-w-[56rem]`}>
+          <caption className="sr-only">Customers list, sortable by column</caption>
+          <thead className={THEAD}>
+            <tr>
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  scope="col"
+                  className={TH}
+                  aria-sort={sortConfig.key === col.key ? sortConfig.direction : 'none'}
                 >
-                  {col.label} {sortConfig.key === col.key && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-                </button>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredSortedEntries.map((entry) => (
-            <tr
-              key={entry.id}
-              onClick={() => setDetailId(entry.id)}
-              className="cursor-pointer transition duration-300 ease-in-out hover:bg-gray-900"
-            >
-              <td className="text-white px-4 py-2">{entry.UUID}</td>
-              <td className="text-white px-4 py-2">
-                <button
-                  type="button"
-                  className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded"
-                  aria-label={`View ${entry.name}`}
-                >
-                  {entry.name}
-                </button>
-              </td>
-              <td className="text-white px-4 py-2">{entry.companyname}</td>
-              <td className="text-white px-4 py-2">{entry.email}</td>
-              <td className="text-white px-4 py-2">{entry.phone}</td>
-              <td className="text-white px-4 py-2">{entry.address}</td>
-              <td className="text-white px-4 py-2 text-center" title={stats.get(entry.id)?.billed}>{stats.get(entry.id)?.count ?? 0}</td>
+                  <button
+                    type="button"
+                    className={`rounded font-semibold uppercase tracking-wide hover:text-slate-900 dark:hover:text-white ${FOCUS}`}
+                    onClick={() => requestSort(col.key)}
+                  >
+                    {col.label} {sortConfig.key === col.key && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                  </button>
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className={TBODY}>
+            {filteredSortedEntries.map((entry) => (
+              <tr key={entry.id} onClick={() => setDetailId(entry.id)} className={TR_CLICK}>
+                <td className={`${TD} font-mono text-xs ${SUBTLE}`}>{entry.UUID}</td>
+                <td className={TD}>
+                  <button type="button" className={ROW_BTN} aria-label={`View ${entry.name}`}>
+                    {entry.name}
+                  </button>
+                </td>
+                <td className={TD}>{entry.companyname}</td>
+                <td className={TD}>{entry.email}</td>
+                <td className={`${TD} whitespace-nowrap`}>{entry.phone}</td>
+                <td className={TD}>{entry.address}</td>
+                <td className={`${TD} text-center`} title={stats.get(entry.id)?.billed}>{stats.get(entry.id)?.count ?? 0}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {statusMessage}
       {dialog}
     </div>

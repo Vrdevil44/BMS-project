@@ -15,7 +15,7 @@ const InvoiceDocument: React.FC<{ invoice: Entry; today: string }> = ({ invoice,
 
   return (
     <article className="text-gray-900 bg-white p-6 text-sm" aria-label={`Invoice ${invoice.UUID}`}>
-      <header className="flex justify-between items-start mb-6">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-2xl font-bold">Invoice</h3>
           <p className="font-mono">{invoice.UUID}</p>
@@ -27,7 +27,7 @@ const InvoiceDocument: React.FC<{ invoice: Entry; today: string }> = ({ invoice,
         </div>
       </header>
 
-      <section className="flex justify-between mb-6">
+      <section className="mb-6 flex flex-wrap justify-between gap-4">
         <div>
           <p className="text-xs uppercase text-gray-600">Bill to</p>
           <p className="font-semibold">{invoice.name}</p>
@@ -51,7 +51,7 @@ const InvoiceDocument: React.FC<{ invoice: Entry; today: string }> = ({ invoice,
         </dl>
       </section>
 
-      <table className="w-full mb-4">
+      <div className="overflow-x-auto"><table className="mb-4 w-full min-w-[22rem]">
         <thead>
           <tr className="border-b-2 border-gray-800 text-left">
             <th scope="col" className="py-1">Description</th>
@@ -73,7 +73,7 @@ const InvoiceDocument: React.FC<{ invoice: Entry; today: string }> = ({ invoice,
             </tr>
           ))}
         </tbody>
-      </table>
+      </table></div>
 
       <dl className="ml-auto w-64 grid grid-cols-2 gap-y-1 text-right">
         <dt>Subtotal</dt>
