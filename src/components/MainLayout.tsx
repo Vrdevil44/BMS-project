@@ -29,16 +29,20 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     <div>
                         {/* Customers Tab */}
                         <button
+                            type="button"
                             className={`block w-full text-left p-4 hover:bg-white/20 ${activeTab === 'customers' ? 'bg-white/40' : 'bg-transparent'
                                 } rounded-lg transition-colors mb-2`}
+                            aria-current={activeTab === 'customers' ? 'page' : undefined}
                             onClick={() => setActiveTab('customers')}
                         >
                             Customers
                         </button>
                         {/* Invoices Tab */}
                         <button
+                            type="button"
                             className={`block w-full text-left p-4 hover:bg-white/20 ${activeTab === 'invoices' ? 'bg-white/40' : 'bg-transparent'
                                 } rounded-lg transition-colors`}
+                            aria-current={activeTab === 'invoices' ? 'page' : undefined}
                             onClick={() => setActiveTab('invoices')}
                         >
                             Invoices
@@ -46,7 +50,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     </div>
                     {process.env.NEXT_PUBLIC_BMS_BACKEND !== 'pocketbase' && (
                         <button
-                            className="block w-full text-left p-4 text-sm bg-red-500/60 hover:bg-red-500/80 rounded-lg transition-colors mt-4"
+                            type="button"
+                            className="block w-full text-left p-4 text-sm bg-red-700/80 hover:bg-red-700 rounded-lg transition-colors mt-4"
                             onClick={handleReset}
                         >
                             Reset demo data

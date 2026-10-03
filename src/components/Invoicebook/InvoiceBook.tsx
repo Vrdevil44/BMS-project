@@ -1,55 +1,49 @@
-import React, { useState, useEffect, FormEvent, useMemo } from 'react';
-import Modal from './Modal';
-import { store } from '../../data';
-
-interface Entry {
-  id: string;
-  UUID: string;
-  name: string;
-  companyname: string;
-  email: string;
-  phone: string;
-  address: string;
-}
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import EntryDialog from '../EntryDialog';
+import { store, Entry } from '../../data';
+import { EntryValues } from '../../lib/validation';
+import { nextInvoiceNumber } from '../../lib/invoiceNumber';
 
 interface SortConfig {
   key: keyof Entry;
   direction: 'ascending' | 'descending';
 }
 
-const AddressBook: React.FC = () => {
+const COLUMNS: { key: keyof Entry; label: string }[] = [
+  { key: 'UUID', label: 'UUID' },
+  { key: 'name', label: 'Name' },
+  { key: 'companyname', label: 'Company Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'phone', label: 'Phone' },
+  { key: 'address', label: 'Address' },
+];
+
+const InvoiceBook: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'ascending' });
   const [showModal, setShowModal] = useState(false);
   const [searchInput, setSearchInput] = useState<string>('');
 
-  useEffect(() => {
-    fetchEntries();
-  }, []);
-
-  const fetchEntries = async () => {
+  const fetchEntries = useCallback(async () => {
     try {
       const records = await store.list('invoicebook');
       setEntries(records);
+      setLoadError(false);
     } catch (error) {
       console.error('Fetch error:', error);
       setEntries([]);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-
-  const clearFormFields = () => {
-    setSelectedEntry({
-      id: '',
-      UUID: '',
-      name: '',
-      companyname: '',
-      email: '',
-      phone: '',
-      address: '',
-    });
-  };
+  useEffect(() => {
+    fetchEntries();
+  }, [fetchEntries]);
 
   const handleAddClick = () => {
     setSelectedEntry(null);
@@ -66,16 +60,36 @@ const AddressBook: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await store.remove('invoicebook', id);
-      fetchEntries();
-      setShowModal(false);
-    } catch (error) {
-      console.error('Delete error:', error);
-    }
+  const handleDelete = async () => {
+    if (!selectedEntry) return;
+    await store.remove('invoicebook', selectedEntry.id);
+    await fetchEntries();
+    handleCloseModal();
   };
 
+  const handleSave = async (values: EntryValues) => {
+    if (selectedEntry) {
+      await store.update('invoicebook', selectedEntry.id, values);
+    } else {
+      // The number is consumed even if the save fails, so it can never be reused.
+      const UUID = nextInvoiceNumber(entries.map((e) => e.UUID));
+      await store.create('invoicebook', { ...values, UUID });
+    }
+    await fetchEntries();
+    handleCloseModal();
+  };
+
+  const lookupCustomer = async (uuid: string): Promise<EntryValues | null> => {
+    try {
+      const record = await store.findByUUID('addressbook', uuid);
+      if (!record) return null;
+      const { name, companyname, email, phone, address } = record;
+      return { name, companyname, email, phone, address };
+    } catch (error) {
+      console.error('Error fetching customer data:', error);
+      return null;
+    }
+  };
 
   const requestSort = (key: keyof Entry) => {
     setSortConfig({
@@ -84,8 +98,12 @@ const AddressBook: React.FC = () => {
     });
   };
 
-  const sortedEntries = useMemo(() => {
-    return [...entries].sort((a, b) => {
+  const filteredSortedEntries = useMemo(() => {
+    const q = searchInput.toLowerCase();
+    const filtered = entries.filter(
+      (entry) => entry.name.toLowerCase().includes(q) || entry.UUID.toLowerCase().includes(q),
+    );
+    return filtered.sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === 'ascending' ? -1 : 1;
       }
@@ -94,119 +112,83 @@ const AddressBook: React.FC = () => {
       }
       return 0;
     });
-  }, [entries, sortConfig]);
+  }, [entries, sortConfig, searchInput]);
 
-  const filteredSortedEntries = useMemo(() => {
-    return sortedEntries.filter(entry =>
-      entry.name.toLowerCase().includes(searchInput.toLowerCase()) ||
-      entry.UUID.toLowerCase().includes(searchInput.toLowerCase()),
+  let statusMessage: React.ReactNode = null;
+  if (loading) statusMessage = <p role="status" className="mt-4 text-gray-800">Loading invoices…</p>;
+  else if (loadError)
+    statusMessage = (
+      <p role="alert" className="mt-4 text-gray-800">
+        Could not load invoices.{' '}
+        <button type="button" className="underline" onClick={() => { setLoading(true); fetchEntries(); }}>Try again</button>
+      </p>
     );
-  }, [sortedEntries, searchInput]);
-
-  const handleFormSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const formData = new FormData(form);
-
-    const entryData = {
-      name: formData.get('name'),
-      companyname: formData.get('companyname'),
-      email: formData.get('email'),
-      phone: formData.get('phone'),
-      address: formData.get('address'),
-    };
-
-    try {
-      if (selectedEntry && selectedEntry.id) {
-        await store.update('invoicebook', selectedEntry.id, entryData as any);
-      } else {
-        await store.create('invoicebook', entryData as any);
-      }
-      fetchEntries();
-      setShowModal(false);
-      setSelectedEntry(null);
-      form.reset();
-    } catch (error) {
-      console.error('Submit error:', error);
-    }
-  };
-
-
-  async function fetchCustomerData(uuid: string): Promise<Entry | null> {
-    try {
-      // Replace 'uuidFieldName' with the actual field name in your 'addressbook' collection that holds the UUID
-      const record = await store.findByUUID('addressbook', uuid);
-      if (record) {
-        return {
-          id: record.id, // or any other necessary field from the record
-          UUID: record.UUID, // or the respective field
-          name: record.name,
-          companyname: record.companyname,
-          email: record.email,
-          phone: record.phone,
-          address: record.address
-        };
-      } else {
-        return null;
-      }
-    } catch (error) {
-      console.error("Error fetching customer data:", error);
-      return null;
-    }
-  }
+  else if (entries.length === 0)
+    statusMessage = <p role="status" className="mt-4 text-gray-800">No invoices yet. Use Add to create the first one.</p>;
+  else if (filteredSortedEntries.length === 0)
+    statusMessage = <p role="status" className="mt-4 text-gray-800">No invoices match “{searchInput}”.</p>;
 
   return (
     <div className="container mx-auto p-6">
       <h1 className="text-2xl font-semibold mb-4 text-gray-800">Invoices</h1>
       <div className="flex items-center space-x-2 mb-4">
         <button
+          type="button"
           onClick={handleAddClick}
-          className="bg-green-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+          className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-md"
         >
           Add
         </button>
+        <label htmlFor="invoices-search" className="sr-only">Search invoices by UUID or name</label>
         <input
+          id="invoices-search"
           className="w-full p-2 border rounded text-gray-700"
           type="text"
           placeholder="Enter UUID or Name to search"
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)} // Update searchInput as user types
+          onChange={(e) => setSearchInput(e.target.value)}
         />
-
       </div>
 
       <table className="w-full border divide-y mt-4 text-gray-800">
+        <caption className="sr-only">Invoices list, sortable by column</caption>
         <thead className="bg-gray-300">
           <tr>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('UUID')}>
-              UUID {sortConfig.key === 'UUID' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('name')}>
-              Name {sortConfig.key === 'name' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('companyname')}>
-              Company Name {sortConfig.key === 'companyname' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('email')}>
-              Email {sortConfig.key === 'email' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('phone')}>
-              Phone {sortConfig.key === 'phone' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-            </th>
-            <th className="px-4 py-2 cursor-pointer" onClick={() => requestSort('address')}>
-              Address {sortConfig.key === 'address' && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-            </th>
+            {COLUMNS.map((col) => (
+              <th
+                key={col.key}
+                scope="col"
+                className="px-4 py-2"
+                aria-sort={sortConfig.key === col.key ? sortConfig.direction : 'none'}
+              >
+                <button
+                  type="button"
+                  className="font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-800 rounded"
+                  onClick={() => requestSort(col.key)}
+                >
+                  {col.label} {sortConfig.key === col.key && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
+                </button>
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {filteredSortedEntries.map((entry) => (
             <tr
               key={entry.id}
-              onClick={() => handleEdit(entry)} // Make the row clickable
-              className={`cursor-pointer transition duration-300 ease-in-out hover:bg-purple-100`}
+              onClick={() => handleEdit(entry)}
+              className="cursor-pointer transition duration-300 ease-in-out hover:bg-purple-100"
             >
               <td className="px-4 py-2">{entry.UUID}</td>
-              <td className="px-4 py-2">{entry.name}</td>
+              <td className="px-4 py-2">
+                <button
+                  type="button"
+                  className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded"
+                  aria-label={`Edit ${entry.name}`}
+                >
+                  {entry.name}
+                </button>
+              </td>
               <td className="px-4 py-2">{entry.companyname}</td>
               <td className="px-4 py-2">{entry.email}</td>
               <td className="px-4 py-2">{entry.phone}</td>
@@ -215,19 +197,21 @@ const AddressBook: React.FC = () => {
           ))}
         </tbody>
       </table>
-      <Modal
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        title={selectedEntry ? 'Edit Invoice Details' : 'Add a New Invoice'}
-        onSubmit={handleFormSubmit} // Pass the form submission handler
-        onClearForm={clearFormFields} // Pass the function to clear the form
-        onDelete={() => selectedEntry && handleDelete(selectedEntry.id)} // Pass the delete handler
-        mode={selectedEntry ? 'edit' : 'add'} // Pass the mode
-        fetchCustomerData={fetchCustomerData}
-        initialData={selectedEntry || { id: '', UUID: '', name: '', companyname: '', email: '', phone: '', address: '' }} // Pass the initial data
-        children={undefined} />
-    </div >
+      {statusMessage}
+      {showModal && (
+        <EntryDialog
+          variant="light"
+          title={selectedEntry ? 'Edit Invoice Details' : 'Add a New Invoice'}
+          noun="invoice"
+          initialData={selectedEntry}
+          onClose={handleCloseModal}
+          onSave={handleSave}
+          onDelete={handleDelete}
+          lookupCustomer={lookupCustomer}
+        />
+      )}
+    </div>
   );
 };
 
-export default AddressBook;
+export default InvoiceBook;
