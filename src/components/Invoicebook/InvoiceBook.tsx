@@ -2,10 +2,13 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import InvoiceDialog from './InvoiceDialog';
 import InvoiceView from './InvoiceView';
 import { store, Entry, EntryInput } from '../../data';
+import {
+  BTN_PRIMARY, FOCUS, INPUT, LINK, LoadingBlock, PAGE_TITLE, ROW_BTN, StatusPill, SUBTLE, TABLE, TABLE_WRAP, TBODY, TD, TH, THEAD, TR_CLICK,
+} from '../ui';
 import { nextInvoiceNumber } from '../../lib/invoiceNumber';
 import { formatMinor } from '../../lib/currency';
 import {
-  compareValues, displayStatus, DisplayStatus, invoiceCurrency, invoiceTotals, isoDate, matchesQuery, STATUS_STYLES,
+  compareValues, displayStatus, DisplayStatus, invoiceCurrency, invoiceTotals, isoDate, matchesQuery,
 } from '../../lib/invoice';
 
 export type InvoiceIntent = { kind: 'view'; id: string } | { kind: 'new'; customerUUID: string };
@@ -142,50 +145,47 @@ const InvoiceBook: React.FC<{ intent?: InvoiceIntent | null }> = ({ intent }) =>
 
   const filtering = searchInput.trim() !== '' || statusFilter !== 'all';
   let statusMessage: React.ReactNode = null;
-  if (loading) statusMessage = <p role="status" className="mt-4 text-gray-800">Loading invoices…</p>;
+  if (loading) statusMessage = <LoadingBlock label="Loading invoices…" />;
   else if (loadError)
     statusMessage = (
-      <p role="alert" className="mt-4 text-gray-800">
+      <p role="alert" className={`mt-4 ${SUBTLE}`}>
         Could not load invoices.{' '}
-        <button type="button" className="underline" onClick={() => { setLoading(true); fetchEntries(); }}>Try again</button>
+        <button type="button" className={LINK} onClick={() => { setLoading(true); fetchEntries(); }}>Try again</button>
       </p>
     );
   else if (entries.length === 0)
-    statusMessage = <p role="status" className="mt-4 text-gray-800">No invoices yet. Use Add to create the first one.</p>;
+    statusMessage = <p role="status" className={`mt-4 ${SUBTLE}`}>No invoices yet. Use Add to create the first one.</p>;
   else if (filteredSortedEntries.length === 0)
     statusMessage = (
-      <p role="status" className="mt-4 text-gray-800">
+      <p role="status" className={`mt-4 ${SUBTLE}`}>
         No invoices match{searchInput.trim() ? ` “${searchInput}”` : ' these filters'}.{' '}
         {filtering && (
-          <button type="button" className="underline" onClick={() => { setSearchInput(''); setStatusFilter('all'); }}>Clear filters</button>
+          <button type="button" className={LINK} onClick={() => { setSearchInput(''); setStatusFilter('all'); }}>Clear filters</button>
         )}
       </p>
     );
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4 text-gray-800">Invoices</h1>
-      <div className="flex items-center space-x-2 mb-4">
-        <button
-          type="button"
-          onClick={handleAddClick}
-          className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-md"
-        >
+    <div>
+      <h1 className={`${PAGE_TITLE} mb-4`}>Invoices</h1>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button type="button" onClick={handleAddClick} className={BTN_PRIMARY}>
           Add
         </button>
         <label htmlFor="invoices-search" className="sr-only">Search invoices by number, customer, company or email</label>
         <input
           id="invoices-search"
-          className="w-full p-2 border rounded text-gray-700"
+          data-search=""
+          className={`${INPUT} min-w-0 flex-1 basis-48`}
           type="text"
-          placeholder="Search number, customer, company or email"
+          placeholder="Search number, customer, company or email  ( / )"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
         <label htmlFor="invoices-status" className="sr-only">Filter by status</label>
         <select
           id="invoices-status"
-          className="p-2 border rounded text-gray-700"
+          className={`${INPUT} w-auto`}
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as DisplayStatus | 'all')}
         >
@@ -193,59 +193,51 @@ const InvoiceBook: React.FC<{ intent?: InvoiceIntent | null }> = ({ intent }) =>
         </select>
       </div>
 
-      <table className="w-full border divide-y mt-4 text-gray-800">
-        <caption className="sr-only">Invoices list, sortable by column</caption>
-        <thead className="bg-gray-300">
-          <tr>
-            {COLUMNS.map((col) => (
-              <th
-                key={col.key}
-                scope="col"
-                className="px-4 py-2"
-                aria-sort={sortConfig.key === col.key ? sortConfig.direction : 'none'}
-              >
-                <button
-                  type="button"
-                  className="font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-800 rounded"
-                  onClick={() => requestSort(col.key)}
+      <div className={TABLE_WRAP}>
+        <table className={TABLE}>
+          <caption className="sr-only">Invoices list, sortable by column</caption>
+          <thead className={THEAD}>
+            <tr>
+              {COLUMNS.map((col) => (
+                <th
+                  key={col.key}
+                  scope="col"
+                  className={TH}
+                  aria-sort={sortConfig.key === col.key ? sortConfig.direction : 'none'}
                 >
-                  {col.label} {sortConfig.key === col.key && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
-                </button>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {filteredSortedEntries.map((entry) => {
-            const status = displayStatus(entry, today);
-            return (
-              <tr
-                key={entry.id}
-                onClick={() => setViewing(entry)}
-                className="cursor-pointer transition duration-300 ease-in-out hover:bg-purple-100"
-              >
-                <td className="px-4 py-2">{entry.UUID}</td>
-                <td className="px-4 py-2">
                   <button
                     type="button"
-                    className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 rounded"
-                    aria-label={`View invoice ${entry.UUID} for ${entry.name}`}
+                    className={`rounded font-semibold uppercase tracking-wide hover:text-slate-900 dark:hover:text-white ${FOCUS}`}
+                    onClick={() => requestSort(col.key)}
                   >
-                    {entry.name}
+                    {col.label} {sortConfig.key === col.key && (sortConfig.direction === 'ascending' ? '▲' : '▼')}
                   </button>
-                  {entry.companyname && <span className="block text-sm text-gray-700">{entry.companyname}</span>}
-                </td>
-                <td className="px-4 py-2">{entry.issueDate ?? '—'}</td>
-                <td className="px-4 py-2">{entry.dueDate ?? '—'}</td>
-                <td className="px-4 py-2">
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${STATUS_STYLES[status]}`}>{status}</span>
-                </td>
-                <td className="px-4 py-2 text-right">{formatMinor(invoiceTotals(entry).totalMinor, invoiceCurrency(entry))}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className={TBODY}>
+            {filteredSortedEntries.map((entry) => {
+              const status = displayStatus(entry, today);
+              return (
+                <tr key={entry.id} onClick={() => setViewing(entry)} className={TR_CLICK}>
+                  <td className={`${TD} whitespace-nowrap font-mono text-xs`}>{entry.UUID}</td>
+                  <td className={TD}>
+                    <button type="button" className={ROW_BTN} aria-label={`View invoice ${entry.UUID} for ${entry.name}`}>
+                      {entry.name}
+                    </button>
+                    {entry.companyname && <span className={`block text-xs ${SUBTLE}`}>{entry.companyname}</span>}
+                  </td>
+                  <td className={`${TD} whitespace-nowrap`}>{entry.issueDate ?? '—'}</td>
+                  <td className={`${TD} whitespace-nowrap`}>{entry.dueDate ?? '—'}</td>
+                  <td className={TD}><StatusPill status={status} /></td>
+                  <td className={`${TD} whitespace-nowrap text-right font-medium tabular-nums`}>{formatMinor(invoiceTotals(entry).totalMinor, invoiceCurrency(entry))}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {statusMessage}
       {viewing && (
         <InvoiceView invoice={viewing} today={today} onClose={() => setViewing(null)} onEdit={() => handleEdit(viewing)} />

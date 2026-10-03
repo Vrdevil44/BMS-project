@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import Dialog from '../Dialog';
 import InvoiceDocument from './InvoiceDocument';
 import { Entry } from '../../data';
+import { BTN_PRIMARY, BTN_SECONDARY } from '../ui';
 
 interface InvoiceViewProps {
   invoice: Entry;
@@ -47,14 +48,14 @@ const InvoiceView: React.FC<InvoiceViewProps> = ({ invoice, today, onClose, onEd
     <Dialog title={`Invoice ${invoice.UUID}`} variant="light" onClose={onClose} wide>
       {() => (
         <>
-          <div className="border rounded mb-4 overflow-auto">
+          <div className="mb-4 overflow-auto rounded-lg border border-slate-200 shadow-inner dark:border-slate-700">
             <InvoiceDocument invoice={invoice} today={today} />
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={handlePrint} className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-md">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={handlePrint} className={BTN_PRIMARY}>
               Download PDF
             </button>
-            <button type="button" onClick={onEdit} className="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-md">
+            <button type="button" onClick={onEdit} className={BTN_SECONDARY}>
               Edit
             </button>
           </div>
