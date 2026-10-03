@@ -3,8 +3,9 @@ import AddressBook from './Addressbook/AddressBook';
 import InvoiceBook, { InvoiceIntent } from './Invoicebook/InvoiceBook';
 import Dashboard from './Dashboard/Dashboard';
 import ShortcutHelp from './ShortcutHelp';
+import Dialog from './Dialog';
 import { useTheme } from './useTheme';
-import { FOCUS } from './ui';
+import { BTN_DANGER, BTN_SECONDARY, ERROR_BOX, FOCUS } from './ui';
 import { resetDemoData } from '../data';
 
 interface MainLayoutProps {
@@ -28,12 +29,54 @@ const isTyping = (el: EventTarget | null) => {
     return !!t && (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName));
 };
 
+interface ResetConfirmProps {
+    onConfirm: () => void;
+    onClose: () => void;
+}
+
+const ResetConfirm: React.FC<ResetConfirmProps> = ({ onConfirm, onClose }) => {
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleConfirm = () => {
+        setBusy(true);
+        setError(null);
+        try {
+            onConfirm();
+        } catch (err) {
+            console.error('Reset error:', err);
+            setError('Could not reset the demo data. Please try again.');
+            setBusy(false);
+        }
+    };
+
+    return (
+        <Dialog title="Reset demo data?" variant="light" onClose={onClose}>
+            {() => (
+                <>
+                    <p className="mb-6 text-sm">This restores the original fake seed data and discards all of your changes. This cannot be undone.</p>
+                    {error && <p role="alert" className={`${ERROR_BOX} mb-4`}>{error}</p>}
+                    <div>
+                        <button type="button" onClick={handleConfirm} disabled={busy} className={`${BTN_DANGER} mr-2`}>
+                            Yes, reset
+                        </button>
+                        <button type="button" data-autofocus="" onClick={onClose} disabled={busy} className={BTN_SECONDARY}>
+                            Keep my data
+                        </button>
+                    </div>
+                </>
+            )}
+        </Dialog>
+    );
+};
+
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [activeTab, setActiveTab] = useState<Tab>('dashboard');
     const [intent, setIntent] = useState<InvoiceIntent | null>(null);
     const [dataVersion, setDataVersion] = useState(0);
     const [newNonce, setNewNonce] = useState(0);
     const [showHelp, setShowHelp] = useState(false);
+    const [confirmingReset, setConfirmingReset] = useState(false);
     const { theme, toggle } = useTheme();
 
     const goTab = (tab: Tab) => {
@@ -50,6 +93,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         setIntent(null);
         resetDemoData();
         setDataVersion((v) => v + 1);
+        setConfirmingReset(false);
     };
 
     // Global single-key shortcuts. Ignored while typing, with modifiers held,
@@ -136,7 +180,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         <button
                             type="button"
                             className={`${sideBtn} !text-red-600 hover:!bg-red-50 dark:!text-red-400 dark:hover:!bg-red-950/40`}
-                            onClick={handleReset}
+                            onClick={() => setConfirmingReset(true)}
                         >
                             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8M3 3v5h5" /></svg>
                             <span className="hidden md:inline">Reset demo data</span>
@@ -165,6 +209,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 </div>
             </main>
             {showHelp && <ShortcutHelp onClose={() => setShowHelp(false)} />}
+            {confirmingReset && <ResetConfirm onConfirm={handleReset} onClose={() => setConfirmingReset(false)} />}
         </div>
     );
 };
